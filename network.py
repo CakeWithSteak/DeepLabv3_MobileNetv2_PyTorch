@@ -279,8 +279,8 @@ class MobileNetv2_DeepLabv3(nn.Module):
             for i in range(self.params.test_batch):
                 idx = batch_idx * self.params.test_batch + i
                 id_map = logits2trainId(out[i, ...])
-                color_map = trainId2color(self.params.dataset_root, id_map, name=name[i])
-                trainId2LabelId(self.params.dataset_root, id_map, name=name[i])
+                color_map = trainId2color(self.params.logdir, id_map, name=name[i])
+                #trainId2LabelId(self.params.logdir, id_map, name=name[i])
                 image_orig = image[i].numpy().transpose(1, 2, 0)
                 image_orig = image_orig * 255
                 image_orig = image_orig.astype(np.uint8)
