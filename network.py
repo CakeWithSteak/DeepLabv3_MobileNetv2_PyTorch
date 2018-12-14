@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import os
+import cv2
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 import numpy as np
@@ -9,7 +10,7 @@ from torch.utils.checkpoint import checkpoint_sequential
 
 import layers
 from progressbar import bar
-from cityscapes import logits2trainId, trainId2color, trainId2LabelId
+from LFW_label_utils import logits2trainId, trainId2color, trainId2LabelId
 
 WARNING = lambda x: print('\033[1;31;2mWARNING: ' + x + '\033[0m')
 LOG = lambda x: print('\033[0;31;2m' + x + '\033[0m')
@@ -279,11 +280,15 @@ class MobileNetv2_DeepLabv3(nn.Module):
             for i in range(self.params.test_batch):
                 idx = batch_idx * self.params.test_batch + i
                 id_map = logits2trainId(out[i, ...])
-                color_map = trainId2color(self.params.logdir, id_map, name=name[i])
+                color_map = trainId2color(self.params.logdir, id_map, name=name[i], save=False)
                 #trainId2LabelId(self.params.logdir, id_map, name=name[i])
                 image_orig = image[i].numpy().transpose(1, 2, 0)
                 image_orig = image_orig * 255
                 image_orig = image_orig.astype(np.uint8)
+
+                image_orig = cv2.cvtColor(image_orig, cv2.COLOR_BGR2RGB).transpose((2, 0, 1))
+                color_map = cv2.cvtColor(color_map, cv2.COLOR_BGR2RGB).transpose((2, 0, 1))
+
                 self.summary_writer.add_image('test/img_%d/orig' % idx, image_orig, idx)
                 self.summary_writer.add_image('test/img_%d/seg' % idx, color_map, idx)
 
