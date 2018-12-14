@@ -13,20 +13,22 @@ def calc_dataset_stats(dataset, axis=0, ep=1e-7):
     return (np.mean(dataset, axis=axis) / 255.0).tolist(), (np.std(dataset + ep, axis=axis) / 255.0).tolist()
 
 
-def create_train_dir(params):
+def get_train_dir_name(params):
+    return params.model + '_' + params.dataset
+
+
+def create_train_dir(train_dir):
     """
     Create folder used in training, folder hierarchy:
-    current folder--exp_folder
-                   |
-                   --summaries
-                   --checkpoints
+    train_dir
+            |
+            --summaries
+            --checkpoints
     """
-    experiment = params.model + '_' + params.dataset
-    exp_dir = os.path.join(params.logdir, experiment)
-    summary_dir = os.path.join(exp_dir, 'summaries/')
-    checkpoint_dir = os.path.join(exp_dir, 'checkpoints/')
+    summary_dir = os.path.join(train_dir, 'summaries/')
+    checkpoint_dir = os.path.join(train_dir, 'checkpoints/')
 
-    dir = [exp_dir, summary_dir, checkpoint_dir]
+    dir = [train_dir, summary_dir, checkpoint_dir]
     for dir_ in dir:
         if not os.path.exists(dir_):
             os.mkdir(dir_)
