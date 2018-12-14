@@ -6,7 +6,7 @@ class Params():
     def __init__(self):
         # network structure parameters
         self.model = 'MobileNetv2_DeepLabv3'
-        self.dataset = 'cityscapes'
+        self.dataset = 'LFW'
         self.s = [2, 1, 2, 2, 2, 1, 1]  # stride of each conv stage
         self.t = [1, 1, 6, 6, 6, 6, 6]  # expansion factor t
         self.n = [1, 1, 2, 3, 4, 3, 3]  # number of repeat time
@@ -17,9 +17,9 @@ class Params():
         self.down_sample_rate = 32  # classic down sample rate
 
         # dataset parameters
-        self.rescale_size = 600
-        self.image_size = 512
-        self.num_class = 20  # 20 classes for training
+        self.rescale_size = 300
+        self.image_size = 256
+        self.num_class = 3  # 3 classes for training
         self.dataset_root = '/path/to/your/dataset'
         self.dataloader_workers = 12
         self.shuffle = True
