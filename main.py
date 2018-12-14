@@ -26,11 +26,11 @@ def main():
     # parse args
     if not os.path.exists(args.root):
         if params.dataset_root is None:
-            raise ValueError('ERROR: Root %s not exists!' % args.root)
+            raise ValueError('ERROR: Root %s doesn\'t exist!' % args.root)
     else:
         params.dataset_root = args.root
     if args.epoch is not None:
-        params.num_epoch = args.epoch
+        params.num_epoch = int(args.epoch)
     if args.lr is not None:
         params.base_lr = args.lr
     if args.pretrain is not None:

@@ -5,6 +5,7 @@ import torch
 from torchvision import transforms
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+from LFW_dataset import LFWDataset
 import zipfile
 
 
@@ -57,79 +58,78 @@ def create_dataset(params):
 
     # file_dir = {p: os.path.join(params.dataset_root, p) for p in phase}
 
-    # datasets = {Cityscapes(file_dir[p], mode=p, transforms=transform[p]) for p in phase}
-    datasets = {p: Cityscapes(params.dataset_root, mode=p, transforms=transform[p]) for p in phase}
+    datasets = {p: LFWDataset(params.dataset_root, mode=p, transforms=transform[p]) for p in phase}
 
     return datasets
 
 
-class Cityscapes(Dataset):
-    def __init__(self, dataset_dir, mode='train', transforms=None):
-        """
-        Create Dataset subclass on cityscapes dataset
-        :param dataset_dir: the path to dataset root, eg. '/media/ubuntu/disk/cityscapes'
-        :param mode: phase, 'train', 'test' or 'eval'
-        :param transforms: transformation
-        """
-        self.dataset = dataset_dir
-        self.transforms = transforms
-        require_file = ['trainImages.txt', 'trainLabels.txt',
-                        'valImages.txt',   'valLabels.txt',
-                        'testImages.txt',  'testLabels.txt']
-
-        # check requirement
-        if mode not in ['train', 'test', 'val']:
-            raise ValueError('Unsupported mode %s' % mode)
-
-        if not os.path.exists(self.dataset):
-            raise ValueError('Dataset not exists at %s' % self.dataset)
-
-        for file in require_file:
-            if file not in os.listdir(self.dataset):
-                # raise ValueError('Cannot find file %s in dataset root folder!' % file)
-                generate_txt(self.dataset, file)
-
-        # create image and label list
-        self.image_list = []
-        self.label_list = []
-        if mode == 'train':
-            for line in open(os.path.join(self.dataset, 'trainImages.txt')):
-                self.image_list.append(line.strip())
-            for line in open(os.path.join(self.dataset, 'trainLabels.txt')):
-                self.label_list.append(line.strip())
-        elif mode == 'val':
-            for line in open(os.path.join(self.dataset, 'valImages.txt')):
-                self.image_list.append(line.strip())
-            for line in open(os.path.join(self.dataset, 'valLabels.txt')):
-                self.label_list.append(line.strip())
-        else:
-            for line in open(os.path.join(self.dataset, 'testImages.txt')):
-                self.image_list.append(line.strip())
-            for line in open(os.path.join(self.dataset, 'testLabels.txt')):
-                self.label_list.append(line.strip())
-
-    def __len__(self):
-        return len(self.image_list)
-
-    def __getitem__(self, index):
-        """
-        Overrides default method
-        tips: 3 channels of label image are the same
-        """
-        image = cv2.imread(os.path.join(self.dataset, self.image_list[index]))
-        label = cv2.imread(os.path.join(self.dataset, self.label_list[index]))  # label.size (1024, 2048, 3)
-        image_name = self.image_list[index]
-        label_name = self.label_list[index]
-        if label.min() == -1:
-            raise ValueError
-
-        sample = {'image': image, 'label': label[:, :, 0],
-                  'image_name': image_name, 'label_name': label_name}
-
-        if self.transforms:
-            sample = self.transforms(sample)
-
-        return sample
+#class Cityscapes(Dataset):
+#    def __init__(self, dataset_dir, mode='train', transforms=None):
+#        """
+#        Create Dataset subclass on cityscapes dataset
+#        :param dataset_dir: the path to dataset root, eg. '/media/ubuntu/disk/cityscapes'
+#        :param mode: phase, 'train', 'test' or 'eval'
+#        :param transforms: transformation
+#        """
+#        self.dataset = dataset_dir
+#        self.transforms = transforms
+#        require_file = ['trainImages.txt', 'trainLabels.txt',
+#                        'valImages.txt',   'valLabels.txt',
+#                        'testImages.txt',  'testLabels.txt']
+#
+#        # check requirement
+#        if mode not in ['train', 'test', 'val']:
+#            raise ValueError('Unsupported mode %s' % mode)
+#
+#        if not os.path.exists(self.dataset):
+#            raise ValueError('Dataset not exists at %s' % self.dataset)
+#
+#        for file in require_file:
+#            if file not in os.listdir(self.dataset):
+#                # raise ValueError('Cannot find file %s in dataset root folder!' % file)
+#                generate_txt(self.dataset, file)
+#
+#        # create image and label list
+#        self.image_list = []
+#        self.label_list = []
+#        if mode == 'train':
+#            for line in open(os.path.join(self.dataset, 'trainImages.txt')):
+#                self.image_list.append(line.strip())
+#            for line in open(os.path.join(self.dataset, 'trainLabels.txt')):
+#                self.label_list.append(line.strip())
+#        elif mode == 'val':
+#            for line in open(os.path.join(self.dataset, 'valImages.txt')):
+#                self.image_list.append(line.strip())
+#            for line in open(os.path.join(self.dataset, 'valLabels.txt')):
+#                self.label_list.append(line.strip())
+#        else:
+#            for line in open(os.path.join(self.dataset, 'testImages.txt')):
+#                self.image_list.append(line.strip())
+#            for line in open(os.path.join(self.dataset, 'testLabels.txt')):
+#                self.label_list.append(line.strip())
+#
+#    def __len__(self):
+#        return len(self.image_list)
+#
+#    def __getitem__(self, index):
+#        """
+#        Overrides default method
+#        tips: 3 channels of label image are the same
+#        """
+#        image = cv2.imread(os.path.join(self.dataset, self.image_list[index]))
+#        label = cv2.imread(os.path.join(self.dataset, self.label_list[index]))  # label.size (1024, 2048, 3)
+#        image_name = self.image_list[index]
+#        label_name = self.label_list[index]
+#        if label.min() == -1:
+#            raise ValueError
+#
+#        sample = {'image': image, 'label': label[:, :, 0],
+#                  'image_name': image_name, 'label_name': label_name}
+#
+#        if self.transforms:
+#            sample = self.transforms(sample)
+#
+#        return sample
 
 
 class Rescale(object):
@@ -301,7 +301,8 @@ def generate_zip(dataset_root):
 
 
 if __name__ == '__main__':
-    dir = '/media/ubuntu/disk/cityscapes'
+    pass
+    #dir = '/media/ubuntu/disk/cityscapes'
     # dataset = Cityscapes(dir)
     # loader = DataLoader(dataset,
     #                     batch_size=10,
@@ -311,6 +312,6 @@ if __name__ == '__main__':
     #     img = batch['image']
     #     lb = batch['label']
     #     print(idx, img.shape)
-    generate_zip(dir)
+    #generate_zip(dir)
     # tips: the last batch may not be as big as batch_size
 
