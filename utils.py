@@ -22,7 +22,7 @@ def create_train_dir(params):
                    --checkpoints
     """
     experiment = params.model + '_' + params.dataset
-    exp_dir = os.path.join(os.getcwd(), experiment)
+    exp_dir = os.path.join(params.logdir, experiment)
     summary_dir = os.path.join(exp_dir, 'summaries/')
     checkpoint_dir = os.path.join(exp_dir, 'checkpoints/')
 

@@ -1,7 +1,8 @@
 from utils import create_train_dir
 
-
 """ Dataset parameters """
+
+
 class Params():
     def __init__(self):
         # network structure parameters
@@ -18,12 +19,12 @@ class Params():
 
         # dataset parameters
         self.rescale_size = 300
-        self.image_size = 256
+        self.image_size = 224
         self.num_class = 3  # 3 classes for training
         self.dataset_root = '/path/to/your/dataset'
-        self.dataloader_workers = 12
+        self.dataloader_workers = 0
         self.shuffle = True
-        self.train_batch = 10
+        self.train_batch = 128
         self.val_batch = 2
         self.test_batch = 1
 
@@ -46,7 +47,9 @@ class Params():
         self.save_every = 10
 
         # create training dir
+        self.logdir = '/mnt/dawars/hdd1/model_saves/'
         self.summary_dir, self.ckpt_dir = create_train_dir(self)
+
 
 if __name__ == '__main__':
     aa = Params()

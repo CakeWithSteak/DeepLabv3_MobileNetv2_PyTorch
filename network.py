@@ -14,6 +14,7 @@ from cityscapes import logits2trainId, trainId2color, trainId2LabelId
 WARNING = lambda x: print('\033[1;31;2mWARNING: ' + x + '\033[0m')
 LOG = lambda x: print('\033[0;31;2m' + x + '\033[0m')
 
+
 # create model
 class MobileNetv2_DeepLabv3(nn.Module):
     """
@@ -35,7 +36,10 @@ class MobileNetv2_DeepLabv3(nn.Module):
         self.ckpt_flag = False
         self.train_loss = []
         self.val_loss = []
-        self.summary_writer = SummaryWriter(log_dir=self.params.summary_dir)
+
+        logdir = self.params.summary_dir
+        print(f"Logging saved at {logdir}")
+        self.summary_writer = SummaryWriter(log_dir=logdir)
 
         # build network
         block = []
@@ -48,9 +52,9 @@ class MobileNetv2_DeepLabv3(nn.Module):
 
         # conv layer 2-7
         for i in range(6):
-            block.extend(layers.get_inverted_residual_block_arr(self.params.c[i], self.params.c[i+1],
-                                                                t=self.params.t[i+1], s=self.params.s[i+1],
-                                                                n=self.params.n[i+1]))
+            block.extend(layers.get_inverted_residual_block_arr(self.params.c[i], self.params.c[i + 1],
+                                                                t=self.params.t[i + 1], s=self.params.s[i + 1],
+                                                                n=self.params.n[i + 1]))
 
         # dilated conv layer 1-4
         # first dilation=rate, follows dilation=multi_grid*rate
@@ -59,7 +63,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
                                              t=self.params.t[6], s=1, dilation=rate))
         for i in range(3):
             block.append(layers.InvertedResidual(self.params.c[6], self.params.c[6],
-                                                 t=self.params.t[6], s=1, dilation=rate*self.params.multi_grid[i]))
+                                                 t=self.params.t[6], s=1, dilation=rate * self.params.multi_grid[i]))
 
         # ASPP layer
         block.append(layers.ASPP_plus(self.params))
@@ -71,7 +75,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
         block.append(nn.Upsample(scale_factor=self.params.output_stride, mode='bilinear', align_corners=False))
 
         self.network = nn.Sequential(*block).cuda()
-        # print(self.network)
+        print(self.network)
 
         # build loss
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=255)
@@ -107,6 +111,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
         train_loader = DataLoader(self.datasets['train'],
                                   batch_size=self.params.train_batch,
                                   shuffle=self.params.shuffle,
+                                  drop_last=True,
                                   num_workers=self.params.dataloader_workers)
         train_size = len(self.datasets['train'])
         if train_size % self.params.train_batch != 0:
@@ -164,6 +169,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
         val_loader = DataLoader(self.datasets['val'],
                                 batch_size=self.params.val_batch,
                                 shuffle=self.params.shuffle,
+                                drop_last=True,
                                 num_workers=self.params.dataloader_workers)
         val_size = len(self.datasets['val'])
         if val_size % self.params.val_batch != 0:
@@ -199,7 +205,6 @@ class MobileNetv2_DeepLabv3(nn.Module):
 
         # add to summary
         self.summary_writer.add_scalar('loss/val_loss', val_loss, self.epoch)
-
 
     def Train(self):
         """
@@ -239,7 +244,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
                 self.save_checkpoint()
 
             # train visualization
-            self.plot_curve()
+            # self.plot_curve()
 
     def Test(self):
         """
@@ -272,12 +277,12 @@ class MobileNetv2_DeepLabv3(nn.Module):
                 out = self.network(image_cuda)
 
             for i in range(self.params.test_batch):
-                idx = batch_idx*self.params.test_batch+i
+                idx = batch_idx * self.params.test_batch + i
                 id_map = logits2trainId(out[i, ...])
                 color_map = trainId2color(self.params.dataset_root, id_map, name=name[i])
                 trainId2LabelId(self.params.dataset_root, id_map, name=name[i])
                 image_orig = image[i].numpy().transpose(1, 2, 0)
-                image_orig = image_orig*255
+                image_orig = image_orig * 255
                 image_orig = image_orig.astype(np.uint8)
                 self.summary_writer.add_image('test/img_%d/orig' % idx, image_orig, idx)
                 self.summary_writer.add_image('test/img_%d/seg' % idx, color_map, idx)
@@ -287,12 +292,12 @@ class MobileNetv2_DeepLabv3(nn.Module):
     """##########################"""
 
     def save_checkpoint(self):
-        save_dict = {'epoch'        :  self.epoch,
-                     'train_loss'   :  self.train_loss,
-                     'val_loss'     :  self.val_loss,
-                     'state_dict'   :  self.network.state_dict(),
-                     'optimizer'    :  self.opt.state_dict()}
-        torch.save(save_dict, self.params.ckpt_dir+'Checkpoint_epoch_%d.pth.tar' % self.epoch)
+        save_dict = {'epoch': self.epoch,
+                     'train_loss': self.train_loss,
+                     'val_loss': self.val_loss,
+                     'state_dict': self.network.state_dict(),
+                     'optimizer': self.opt.state_dict()}
+        torch.save(save_dict, self.params.ckpt_dir + 'Checkpoint_epoch_%d.pth.tar' % self.epoch)
         print('Checkpoint saved')
 
     def load_checkpoint(self):
@@ -316,7 +321,8 @@ class MobileNetv2_DeepLabv3(nn.Module):
                 LOG('Current Epoch: %d' % self.epoch)
                 self.ckpt_flag = True
             except:
-                WARNING('Cannot load checkpoint from %s. Start loading pre-trained model......' % self.params.resume_from)
+                WARNING(
+                    'Cannot load checkpoint from %s. Start loading pre-trained model......' % self.params.resume_from)
         else:
             WARNING('Checkpoint do not exists. Start loading pre-trained model......')
 
@@ -370,9 +376,9 @@ class MobileNetv2_DeepLabv3(nn.Module):
         """
         Plot train/val loss curve
         """
-        x1 = np.arange(self.init_epoch, self.params.num_epoch+1, dtype=np.int).tolist()
+        x1 = np.arange(self.init_epoch, self.params.num_epoch + 1, dtype=np.int).tolist()
         x2 = np.linspace(self.init_epoch, self.epoch,
-                         num=(self.epoch-self.init_epoch)//self.params.val_every+1, dtype=np.int64)
+                         num=(self.epoch - self.init_epoch) // self.params.val_every + 1, dtype=np.int64)
         plt.plot(x1, self.train_loss, label='train_loss')
         plt.plot(x2, self.val_loss, label='val_loss')
         plt.legend(loc='best')
@@ -381,7 +387,6 @@ class MobileNetv2_DeepLabv3(nn.Module):
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.show()
-
 
 # """ TEST """
 # if __name__ == '__main__':
