@@ -212,7 +212,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
         """
         self.init_epoch = self.epoch
         if self.epoch >= self.params.num_epoch:
-            WARNING('Num_epoch should be smaller than current epoch. Skip training......\n')
+            WARNING('Num_epoch should be smaller than the current epoch. Skipping training......\n')
         else:
             for _ in range(self.epoch, self.params.num_epoch):
                 self.epoch += 1
@@ -324,7 +324,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
                 WARNING(
                     'Cannot load checkpoint from %s. Start loading pre-trained model......' % self.params.resume_from)
         else:
-            WARNING('Checkpoint do not exists. Start loading pre-trained model......')
+            WARNING('Checkpoint doesn\'t exist. Start loading pre-trained model......')
 
     def load_model(self):
         """
@@ -343,7 +343,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
                 except:
                     WARNING('Cannot load pre-trained model. Start training......')
             else:
-                WARNING('Pre-trained model do not exits. Start training......')
+                WARNING('Pre-trained model doesn\'t exist. Start training......')
 
     """#############"""
     """# Utilities #"""

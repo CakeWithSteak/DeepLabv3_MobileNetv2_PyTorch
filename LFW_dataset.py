@@ -31,7 +31,7 @@ class LFWDataset(Dataset):
         if mode not in ['train', 'test', 'val']:
             raise ValueError('Unsupported mode %s' % mode)
 
-        if not os.path.exists(dataset_dir + "/images") or not os.path.exists(dataset_dir + "/masks"):
+        if not os.path.exists(os.path.join(dataset_dir, "images")) or not os.path.exists(os.path.join(dataset_dir, "masks")):
             raise ValueError('Dataset doesn\'t exist at %s' % dataset_dir)
 
         self.img_files = get_img_files(dataset_dir)
@@ -49,13 +49,12 @@ class LFWDataset(Dataset):
 
     def __getitem__(self, idx):
         img = cv2.imread(self.img_files[idx])
-        #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
         image_name = os.path.basename(self.img_files[idx])
 
         mask = cv2.imread(self.mask_files[idx])
         mask = np.argmax(mask, axis=2)
-        #mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
+
         if mask.min() == -1:
             raise ValueError
 

@@ -1,4 +1,5 @@
-from utils import create_train_dir
+import os
+from utils import get_train_dir_name
 
 """ Dataset parameters """
 
@@ -47,8 +48,9 @@ class Params():
         self.save_every = 10
 
         # create training dir
-        self.logdir = '/mnt/dawars/hdd1/model_saves/'
-        self.summary_dir, self.ckpt_dir = create_train_dir(self)
+        self.logdir = get_train_dir_name(self)
+        self.summary_dir = None
+        self.ckpt_dir = None
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 import os
 import argparse
-from utils import create_dataset
+from utils import create_dataset, create_train_dir
 from network import MobileNetv2_DeepLabv3
 from config import Params
 from utils import print_config
@@ -12,13 +12,16 @@ LOG = lambda x: print('\033[0;31;2m' + x + '\033[0m')
 def main():
     # add argumentation
     parser = argparse.ArgumentParser(description='MobileNet_v2_DeepLab_v3 Pytorch Implementation')
-    parser.add_argument('--dataset', default='cityscapes', choices=['cityscapes', 'other'],
-                        help='Dataset used in training MobileNet v2+DeepLab v3')
+    #todo maybe make it work with multiple datasets?
+    #parser.add_argument('--dataset', default='cityscapes', choices=['cityscapes', 'other'],
+    #                    help='Dataset used in training MobileNet v2+DeepLab v3')
     parser.add_argument('--root', default='./data/cityscapes', help='Path to your dataset')
     parser.add_argument('--epoch', default=None, help='Total number of training epoch')
     parser.add_argument('--lr', default=None, help='Base learning rate')
     parser.add_argument('--pretrain', default=None, help='Path to a pre-trained backbone model')
     parser.add_argument('--resume_from', default=None, help='Path to a checkpoint to resume model')
+    parser.add_argument('--logdir', default=None, help='Directory to save logs for Tensorboard')
+    parser.add_argument('--batch_size', default=128, help='Batch size for training')
 
     args = parser.parse_args()
     params = Params()
@@ -37,6 +40,10 @@ def main():
         params.pre_trained_from = args.pretrain
     if args.resume_from is not None:
         params.resume_from = args.resume_from
+    if args.logdir is not None:
+        params.logdir = args.logdir
+    params.summary_dir, params.ckpt_dir = create_train_dir(params.logdir)
+    params.train_batch = int(args.batch_size)
 
     LOG('Network parameters:')
     print_config(params)
@@ -54,6 +61,7 @@ def main():
     # let's start to train!
     net.Train()
     net.Test()
+
 
 if __name__ == '__main__':
     main()

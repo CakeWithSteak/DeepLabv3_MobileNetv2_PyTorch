@@ -134,7 +134,7 @@ def trainId2color(dataset_root, id_map, name):
     # color_map = cv2.resize(color_map, dsize=(2048, 1024), interpolation=cv2.INTER_NEAREST)
 
     # save trainIds and color
-    cv2.imwrite(dataset_root + '/' + name, id_map)
+    #cv2.imwrite(dataset_root + '/' + name, id_map)
     name = name.replace('labelTrainIds', 'color')
     cv2.imwrite(dataset_root + '/' + name, color_map)
 
