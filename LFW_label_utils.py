@@ -1,5 +1,4 @@
 import cv2
-import matplotlib.pyplot as plt
 import torch
 from collections import namedtuple
 import numpy as np
@@ -83,12 +82,13 @@ def logits2trainId(logits):
     return logits
 
 
-def trainId2color(train_dir, id_map, name):
+def trainId2color(train_dir, id_map, name, save):
     """
     Transform trainId map into color map
     :param train_dir: the path to the training directory
     :param id_map: torch tensor
     :param name: name of image, eg. 'gtFine/test/leverkusen/leverkusen_000027_000019_gtFine_labelTrainIds.png'
+    :param save: Whether or not to save the colormap to disc
     """
     # transform = {label.trainId: label.color for label in labels}
     assert len(id_map.shape) == 2, 'Id_map must be a 2-D tensor of shape (h, w) where h, w = H, W / output_stride'
@@ -99,12 +99,13 @@ def trainId2color(train_dir, id_map, name):
         if not label.ignoreInEval:
             color_map[id_map == label.trainId] = np.array(label.color)
     color_map = color_map.astype(np.uint8)
-    # color_map = cv2.resize(color_map, dsize=(2048, 1024), interpolation=cv2.INTER_NEAREST)
+    color_map = cv2.resize(color_map, dsize=(250, 250), interpolation=cv2.INTER_NEAREST)
 
     # save trainIds and color
     #cv2.imwrite(train_dir + '/' + name, id_map)
     #name = name.replace('labelTrainIds', 'color')
-    cv2.imwrite(train_dir + '/' + name, color_map)
+    if save:
+        cv2.imwrite(train_dir + '/' + name, color_map)
 
     return color_map
 
