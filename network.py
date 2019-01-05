@@ -94,6 +94,9 @@ class MobileNetv2_DeepLabv3(nn.Module):
         self.load_checkpoint()
         self.load_model()
 
+    def forward(self, input):
+        return self.network(input)
+
     """######################"""
     """# Train and Validate #"""
     """######################"""
