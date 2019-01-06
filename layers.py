@@ -76,17 +76,18 @@ def get_inverted_residual_block_arr(in_, out_, t=6, s=1, n=1):
 
 class ASPP_plus(nn.Module):
     def __init__(self, params):
+        #todo depthwise separable conv
         super(ASPP_plus, self).__init__()
-        self.conv11 = nn.Sequential(nn.Conv2d(params.c[-1], 256, 1, bias=False),
+        self.conv11 = nn.Sequential(nn.Conv2d(params.c[-1], 256, 1, bias=False,),
                                      nn.BatchNorm2d(256))
         self.conv33_1 = nn.Sequential(nn.Conv2d(params.c[-1], 256, 3,
-                                                padding=params.aspp[0], dilation=params.aspp[0], bias=False),
+                                                padding=params.aspp[0], dilation=params.aspp[0], bias=False,),
                                       nn.BatchNorm2d(256))
         self.conv33_2 = nn.Sequential(nn.Conv2d(params.c[-1], 256, 3,
-                                                padding=params.aspp[1], dilation=params.aspp[1], bias=False),
+                                                padding=params.aspp[1], dilation=params.aspp[1], bias=False,),
                                       nn.BatchNorm2d(256))
         self.conv33_3 = nn.Sequential(nn.Conv2d(params.c[-1], 256, 3,
-                                                padding=params.aspp[2], dilation=params.aspp[2], bias=False),
+                                                padding=params.aspp[2], dilation=params.aspp[2], bias=False,),
                                       nn.BatchNorm2d(256))
         self.concate_conv = nn.Sequential(nn.Conv2d(256*5, 256, 1, bias=False),
                                       nn.BatchNorm2d(256))
