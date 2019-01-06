@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--lr', default=None, help='Base learning rate')
     parser.add_argument('--pretrain', default=None, help='Path to a pre-trained backbone model')
     parser.add_argument('--resume_from', default=None, help='Path to a checkpoint to resume model')
-    parser.add_argument('--logdir', default=None, help='Directory to save logs for Tensorboard')
+    parser.add_argument('--logdir', default=None, help='Directory to save original_logs for Tensorboard')
     parser.add_argument('--batch_size', default=128, help='Batch size for training')
 
     args = parser.parse_args()

@@ -43,46 +43,58 @@ class MobileNetv2_DeepLabv3(nn.Module):
         self.summary_writer = SummaryWriter(log_dir=logdir)
 
         # build network
-        block = []
+        mobilenet_block1 = []
 
         # conv layer 1
-        block.append(nn.Sequential(nn.Conv2d(3, self.params.c[0], 3, stride=self.params.s[0], padding=1, bias=False),
+        mobilenet_block1.append(nn.Sequential(nn.Conv2d(3, self.params.c[0], 3, stride=self.params.s[0], padding=1, bias=False),
                                    nn.BatchNorm2d(self.params.c[0]),
                                    # nn.Dropout2d(self.params.dropout_prob, inplace=True),
                                    nn.ReLU6()))
 
-        # conv layer 2-7
-        for i in range(6):
-            block.extend(layers.get_inverted_residual_block_arr(self.params.c[i], self.params.c[i + 1],
+        # Inv.res blocks 1-2
+        for i in range(2):
+            mobilenet_block1.extend(layers.get_inverted_residual_block_arr(self.params.c[i], self.params.c[i + 1],
+                                                                t=self.params.t[i + 1], s=self.params.s[i + 1],
+                                                                n=self.params.n[i + 1]))
+
+        self.mobilenet1 = nn.Sequential(*mobilenet_block1).cuda()
+        self.lowlevel = nn.Conv2d(self.params.c[2], 64, 1).cuda()
+
+        mobilenet_block2 = []
+
+        #Inv. res blocks 3-7
+        for i in range(2, 6):
+            mobilenet_block2.extend(layers.get_inverted_residual_block_arr(self.params.c[i], self.params.c[i + 1],
                                                                 t=self.params.t[i + 1], s=self.params.s[i + 1],
                                                                 n=self.params.n[i + 1]))
 
         # dilated conv layer 1-4
         # first dilation=rate, follows dilation=multi_grid*rate
         rate = self.params.down_sample_rate // self.params.output_stride
-        block.append(layers.InvertedResidual(self.params.c[6], self.params.c[6],
+        mobilenet_block2.append(layers.InvertedResidual(self.params.c[6], self.params.c[6],
                                              t=self.params.t[6], s=1, dilation=rate))
         for i in range(3):
-            block.append(layers.InvertedResidual(self.params.c[6], self.params.c[6],
+            mobilenet_block2.append(layers.InvertedResidual(self.params.c[6], self.params.c[6],
                                                  t=self.params.t[6], s=1, dilation=rate * self.params.multi_grid[i]))
 
-        # ASPP layer
-        block.append(layers.ASPP_plus(self.params))
+        self.mobilenet2 = nn.Sequential(*mobilenet_block2).cuda()
 
-        # final conv layer
-        block.append(nn.Conv2d(256, self.params.num_class, 1))
+        self.deeplab_context = nn.Sequential(
+            layers.ASPP_plus(self.params),
+            nn.Conv2d(256, 64, 1),
+            nn.Upsample(scale_factor=4, mode="bilinear", align_corners=False)
+        ).cuda()
 
-        # bilinear upsample
-        block.append(nn.Upsample(scale_factor=self.params.output_stride, mode='bilinear', align_corners=False))
-
-        self.network = nn.Sequential(*block).cuda()
-        print(self.network)
+        self.deeplab_cat = nn.Sequential(
+            nn.Conv2d(128, self.params.num_class, (3, 3), padding=1),
+            nn.Upsample(scale_factor=4, mode="bilinear", align_corners=False)
+        ).cuda()
 
         # build loss
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=255)
 
         # optimizer
-        self.opt = torch.optim.RMSprop(self.network.parameters(),
+        self.opt = torch.optim.RMSprop(list(self.mobilenet1.parameters())+list(self.mobilenet2.parameters())+list(self.deeplab_context.parameters())+list(self.lowlevel.parameters())+list(self.deeplab_cat.parameters()),
                                        lr=self.params.base_lr,
                                        momentum=self.params.momentum,
                                        weight_decay=self.params.weight_decay)
@@ -95,7 +107,12 @@ class MobileNetv2_DeepLabv3(nn.Module):
         self.load_model()
 
     def forward(self, input):
-        return self.network(input)
+        mobilenet_part = self.mobilenet1(input)
+        lowlevel = self.lowlevel(mobilenet_part)
+        mobilenet_full = self.mobilenet2(mobilenet_part)
+        context = self.deeplab_context(mobilenet_full)
+        cat = torch.cat([context, lowlevel], dim=1)
+        return self.deeplab_cat(cat)
 
     """######################"""
     """# Train and Validate #"""
@@ -108,7 +125,11 @@ class MobileNetv2_DeepLabv3(nn.Module):
         print('Training......')
 
         # set mode train
-        self.network.train()
+        self.mobilenet1.train()
+        self.mobilenet2.train()
+        self.deeplab_cat.train()
+        self.lowlevel.train()
+        self.deeplab_context.train()
 
         # prepare data
         train_loss = 0
@@ -134,7 +155,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
                 image_cuda.requires_grad_()
                 out = checkpoint_sequential(self.network, self.params.split, image_cuda)
             else:
-                out = self.network(image_cuda)
+                out = self.forward(image_cuda)
             loss = self.loss_fn(out, label_cuda)
 
             # optimize
@@ -166,7 +187,11 @@ class MobileNetv2_DeepLabv3(nn.Module):
         print('Validating:')
 
         # set mode eval
-        self.network.eval()
+        self.mobilenet1.eval()
+        self.mobilenet2.eval()
+        self.deeplab_cat.eval()
+        self.lowlevel.eval()
+        self.deeplab_context.eval()
 
         # prepare data
         val_loss = 0
@@ -192,7 +217,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
                 image_cuda.requires_grad_()
                 out = checkpoint_sequential(self.network, self.params.split, image_cuda)
             else:
-                out = self.network(image_cuda)
+                out = self.forward(image_cuda)
 
             loss = self.loss_fn(out, label_cuda)
 
@@ -257,7 +282,11 @@ class MobileNetv2_DeepLabv3(nn.Module):
         print('Testing:')
         # set mode eval
         torch.cuda.empty_cache()
-        self.network.eval()
+        self.mobilenet1.eval()
+        self.mobilenet2.eval()
+        self.deeplab_cat.eval()
+        self.lowlevel.eval()
+        self.deeplab_context.eval()
 
         # prepare test data
         test_loader = DataLoader(self.datasets['test'],
@@ -278,7 +307,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
                 image_cuda.requires_grad_()
                 out = checkpoint_sequential(self.network, self.params.split, image_cuda)
             else:
-                out = self.network(image_cuda)
+                out = self.forward(image_cuda)
 
             for i in range(self.params.test_batch):
                 idx = batch_idx * self.params.test_batch + i
@@ -303,7 +332,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
         save_dict = {'epoch': self.epoch,
                      'train_loss': self.train_loss,
                      'val_loss': self.val_loss,
-                     'state_dict': self.network.state_dict(),
+                     'state_dict': self.state_dict(),
                      'optimizer': self.opt.state_dict()}
         torch.save(save_dict, self.params.ckpt_dir + 'Checkpoint_epoch_%d.pth.tar' % self.epoch)
         print('Checkpoint saved')
@@ -323,7 +352,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
                 except:
                     self.train_loss = []
                     self.val_loss = []
-                self.network.load_state_dict(ckpt['state_dict'])
+                self.load_state_dict(ckpt['state_dict'])
                 self.opt.load_state_dict(ckpt['optimizer'])
                 LOG('Checkpoint Loaded!')
                 LOG('Current Epoch: %d' % self.epoch)
@@ -346,7 +375,7 @@ class MobileNetv2_DeepLabv3(nn.Module):
                 try:
                     LOG('Loading Pre-trained Model at %s' % self.params.pre_trained_from)
                     pretrain = torch.load(self.params.pre_trained_from)
-                    self.network.load_state_dict(pretrain)
+                    self.load_state_dict(pretrain)
                     LOG('Pre-trained Model Loaded!')
                 except:
                     WARNING('Cannot load pre-trained model. Start training......')
